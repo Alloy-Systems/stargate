@@ -1,0 +1,25 @@
+services:
+  gateway:
+    build: .
+    image: gateway
+    container_name: gateway
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Container-specific overrides (take precedence over .env).
+      # Inside the container the logs volume is always mounted at /app/logs.
+      LOGS_PATH: /app/logs
+      # PORT: 4300
+      # NODE_ENV: development
+      # LOG_LEVEL: info
+      # ALLOY_API_URL: https://api.alloy.cx
+      # ALLOY_API_KEY: xxx
+      # INTERNAL_SYSTEM: xxx
+      # INTERNAL_SYSTEM_URL: http://127.0.0.1:9000
+      # INTERNAL_AUTHORIZATION_HEADER_NAME: Authorization
+      # INTERNAL_AUTHORIZATION_HEADER_VALUE: "Bearer {token}"
+    ports:
+      - "${PORT:-4300}:${PORT:-4300}"
+    volumes:
+      - ./logs:/app/logs

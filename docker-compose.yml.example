@@ -19,6 +19,9 @@ services:
       # INTERNAL_SYSTEM_URL: http://127.0.0.1:9000
       # INTERNAL_AUTHORIZATION_HEADER_NAME: Authorization
       # INTERNAL_AUTHORIZATION_HEADER_VALUE: "Bearer {token}"
+      # HTTP_PROXY: http://127.0.0.1:8080
+      # HTTPS_PROXY: https://127.0.0.1:8080
+      # NO_PROXY: 127.0.0.1,localhost
     ports:
       - "${PORT:-4300}:${PORT:-4300}"
     volumes:

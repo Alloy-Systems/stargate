@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "./components/proxy/httpProxy.js";
 import { createApp } from "./app.js";
 import { logger } from "./components/logs/logger.js";
 import { startStargatePolling } from "./stargate.js";

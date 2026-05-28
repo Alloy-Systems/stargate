@@ -97,6 +97,18 @@ The background daemon long-polls Alloy for tasks targeted at this system, runs t
 
 If any of the three required stargate vars are missing, the daemon logs `stargate_disabled` and stays idle (server still serves HTTP requests).
 
+### HTTP proxy
+
+All outbound `fetch` calls (the `/api/*` proxy, stargate polling, task execution, task result reporting) honor the standard Node/undici proxy environment variables. If neither `HTTP_PROXY` nor `HTTPS_PROXY` is set, the app makes direct connections as before — nothing changes.
+
+| Var | Required | Purpose |
+|---|---|---|
+| `HTTP_PROXY` | no | Proxy URL for outbound `http://` requests. Example: `http://corp-proxy:8080` (with optional `user:pass@`). |
+| `HTTPS_PROXY` | no | Proxy URL for outbound `https://` requests. Example: `http://corp-proxy:8080`. |
+| `NO_PROXY` | no | Comma-separated list of hosts/patterns that should bypass the proxy. Useful when the upstream proxy can't reach internal services. Example: `host.docker.internal,localhost,127.0.0.1`. |
+
+When a proxy is configured, the app logs `http_proxy_enabled` at startup with the resolved values so you can confirm it's active. The proxy is installed globally via `undici.setGlobalDispatcher(new EnvHttpProxyAgent())`, so every fetch in the process routes through it.
+
 ## Process behavior
 
 - `SIGINT` / `SIGTERM` → graceful shutdown (closes the HTTP server, then exits).

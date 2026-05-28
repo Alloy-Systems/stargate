@@ -11,6 +11,9 @@ declare global {
       INTERNAL_AUTHORIZATION_HEADER_NAME?: string;
       INTERNAL_AUTHORIZATION_HEADER_VALUE?: string;
       LOGS_PATH?: string;
+      HTTP_PROXY?: string;
+      HTTPS_PROXY?: string;
+      NO_PROXY?: string;
     }
   }
 }

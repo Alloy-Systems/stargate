@@ -1,6 +1,16 @@
-# gateway
+# Stargate
 
-Minimal Express 5 + TypeScript starter using `express`, `express-validation`, and `winston`.
+## About Alloy
+
+Alloy is an AI-native workspace where your team and AI agents collaborate — sharing artifacts, knowledge, skills, and access to external systems, all on one foundation. Connect Claude, Codex, or Gemini — or spawn Alloy cloud agents — and let them coordinate with each other and your teammates.
+
+Start free at [alloy.cx](https://alloy.cx) · Docs: [alloy.cx/docs](https://alloy.cx/docs)
+
+---
+
+Stargate is Alloy's edge gateway. It runs inside a customer's network, pulls tasks routed to it by Alloy, executes them against internal systems, and reports results back — so agents can act on private systems without exposing them publicly.
+
+Built on Express 5 + TypeScript (`express`, `express-validation`, `winston`).
 
 ## Requirements
 

@@ -123,3 +123,55 @@ When a proxy is configured, the app logs `http_proxy_enabled` at startup with th
 
 - `SIGINT` / `SIGTERM` → graceful shutdown (closes the HTTP server, then exits).
 - `uncaughtException` / `unhandledRejection` → logged via winston; the process is NOT terminated. Convenient for a dev starter; reconsider for production — the app may be in an undefined state after these fire.
+
+## Metrics
+
+The gateway exposes a `GET /metrics` endpoint that returns an in-process counter snapshot as JSON. Counters live in memory only — they reset on every process start.
+
+```bash
+curl http://localhost:4300/metrics
+```
+
+Example response:
+
+```json
+{
+  "startedAt": "2026-05-30T07:42:11.123Z",
+  "proxyRequestsTotal": 142,
+  "proxyRequestsCompleted": 140,
+  "proxyRequestsFailed": 2,
+  "stargatePollsCompleted": 38,
+  "stargatePollsFailed": 1,
+  "tasksReceived": 12,
+  "tasksCompleted": 11,
+  "tasksFailed": 1,
+  "tasksReportCompleted": 12,
+  "tasksReportFailed": 0,
+  "apiStatusSuccess": true,
+  "stargatePollingStatusSuccess": true
+}
+```
+
+### Fields
+
+| Field | Type | Meaning |
+|---|---|---|
+| `startedAt` | ISO date | When the process booted (or when `Metrics.resetMetrics()` was last called — currently only at startup) |
+| `proxyRequestsTotal` | counter | Every request that hit `/api/*` and was about to be proxied |
+| `proxyRequestsCompleted` | counter | Proxy requests where the upstream returned a response (any status code) |
+| `proxyRequestsFailed` | counter | Proxy requests where `fetch` itself threw (network/TLS/proxy error) |
+| `stargatePollsCompleted` | counter | Long-poll requests to Alloy stargate that returned successfully (`2xx`) |
+| `stargatePollsFailed` | counter | Long-poll requests that failed (non-`2xx`, network error, or aborted before stop) |
+| `tasksReceived` | counter | Total tasks pulled from stargate across all polls |
+| `tasksCompleted` | counter | Tasks where `fetch` to `INTERNAL_SYSTEM_URL` returned a response (any status) |
+| `tasksFailed` | counter | Tasks where execution against the internal service threw, or env was missing |
+| `tasksReportCompleted` | counter | Result reports successfully sent back to `${ALLOY_API_URL}/api/private/stargate/:id` |
+| `tasksReportFailed` | counter | Result reports that threw or had missing env |
+| `apiStatusSuccess` | boolean | Latest `/api/*` proxy attempt — `true` if env is configured, `false` if `gateway_misconfigured` fired |
+| `stargatePollingStatusSuccess` | boolean | `true` while the daemon is running; `false` if it logged `stargate_disabled` due to missing env |
+
+### Notes
+
+- All counters are unbounded `int` and never decrease (except via process restart).
+- The values are a snapshot at request time — no rate, no histogram, no labels. Wire to Prometheus etc. by polling this endpoint and computing derivatives externally.
+- `tasksReceived - tasksCompleted - tasksFailed` should converge to 0 once the in-flight batch finishes. If it stays positive long after polls stop, something is hanging inside `TaskProcessor.process()`.

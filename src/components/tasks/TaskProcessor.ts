@@ -1,5 +1,7 @@
 import { logger } from "../logs/logger.js";
 import type { Task } from "../../types/task.js";
+import { Metrics } from "../metrics/metrics.js";
+
 
 export type TaskResult = {
   ok: boolean;
@@ -15,6 +17,7 @@ export class TaskProcessor {
     const authHeaderValue = process.env.INTERNAL_AUTHORIZATION_HEADER_VALUE;
 
     if (!baseUrl) {
+      Metrics.tickTasksFailed()
       logger.error("task_processor_misconfigured", {
         hasUrl: Boolean(baseUrl),
         hasAuth: Boolean(authHeaderName) && Boolean(authHeaderValue),
@@ -66,6 +69,7 @@ export class TaskProcessor {
         ok: res.ok,
         durationMs: Date.now() - startedAt,
       });
+      Metrics.tickTasksCompleted()
       result = {
         ok: res.ok,
         status: res.status,
@@ -73,6 +77,7 @@ export class TaskProcessor {
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      Metrics.tickTasksFailed()
       logger.error("task_process_error", {
         id: task.stargate_task_id,
         method: task.method,
@@ -97,6 +102,7 @@ export class TaskProcessor {
     const apiKey = process.env.ALLOY_API_KEY;
 
     if (!stargateUrl || !apiKey) {
+      Metrics.tickTasksReportFailed()
       logger.error("task_report_misconfigured", {
         id: task.stargate_task_id,
         hasUrl: Boolean(stargateUrl),
@@ -122,12 +128,14 @@ export class TaskProcessor {
         },
         body,
       });
+      Metrics.tickTasksReportCompleted()
       logger.info("task_reported", {
         id: task.stargate_task_id,
         status: res.status,
         ok: res.ok,
       });
     } catch (err) {
+      Metrics.tickTasksReportFailed()
       logger.error("task_report_error", {
         id: task.stargate_task_id,
         message: err instanceof Error ? err.message : String(err),

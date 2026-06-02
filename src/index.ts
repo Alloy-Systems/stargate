@@ -3,8 +3,14 @@ import "./components/proxy/httpProxy.js";
 import { createApp } from "./app.js";
 import { logger } from "./components/logs/logger.js";
 import { startStargatePolling } from "./stargate.js";
+import { Metrics } from "./components/metrics/metrics.js";
+
+export const metrics = new Metrics()
+
 
 const port = Number(process.env.PORT ?? 4300);
+
+Metrics.resetMetrics()
 
 const app = createApp();
 const server = app.listen(port, () => {

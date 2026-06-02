@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import { Readable } from "node:stream";
 import { logger } from "../components/logs/logger.js";
+import { Metrics } from "../components/metrics/metrics.js";
+
 
 const HOP_BY_HOP = new Set([
   "connection",
@@ -30,10 +32,11 @@ apiRouter.all(/.*/, async (req, res, next) => {
       hasUrl: Boolean(baseUrl),
       hasKey: Boolean(apiKey),
     });
+    Metrics.setApiStatusSuccess(false);
     res.status(502).json({ error: "Upstream not configured" });
     return;
   }
-
+  Metrics.setApiStatusSuccess(true);
   const targetUrl = `${baseUrl}/api${req.url}`;
 
   logger.info("gateway_request", {
@@ -45,6 +48,8 @@ apiRouter.all(/.*/, async (req, res, next) => {
     contentLength: req.headers["content-length"],
     userAgent: req.headers["user-agent"],
   });
+
+  Metrics.tickProxyRequestsTotal()
 
   const headers = new Headers();
   for (const [name, value] of Object.entries(req.headers)) {
@@ -81,6 +86,8 @@ apiRouter.all(/.*/, async (req, res, next) => {
       durationMs: Date.now() - startedAt,
     });
 
+    Metrics.tickProxyRequestsCompleted()
+
     res.status(upstream.status);
     upstream.headers.forEach((value, key) => {
       if (HOP_BY_HOP.has(key.toLowerCase())) return;
@@ -93,6 +100,8 @@ apiRouter.all(/.*/, async (req, res, next) => {
       res.end();
     }
   } catch (err) {
+    Metrics.tickProxyRequestsFailed()
+
     logger.error("gateway_error", {
       requestId,
       target: targetUrl,

@@ -1,6 +1,7 @@
 import { logger } from "./components/logs/logger.js";
 import type { Task } from "./types/task.js";
 import { TaskProcessor } from "./components/tasks/TaskProcessor.js";
+import { Metrics } from "./components/metrics/metrics.js";
 
 type StargateResponse = {
   success: boolean;
@@ -19,6 +20,7 @@ export function startStargatePolling(): StargateDaemon {
   const system = process.env.INTERNAL_SYSTEM;
 
   if (!baseUrl || !apiKey || !system) {
+    Metrics.setStargatePollingStatusSuccess(false);
     logger.warn("stargate_disabled", {
       hasUrl: Boolean(baseUrl),
       hasKey: Boolean(apiKey),
@@ -35,6 +37,7 @@ export function startStargatePolling(): StargateDaemon {
 
   const loop = (async () => {
     logger.info("stargate_started", { url });
+    Metrics.setStargatePollingStatusSuccess(true);
     while (!stopped) {
       try {
         const res = await fetch(url, {
@@ -44,22 +47,24 @@ export function startStargatePolling(): StargateDaemon {
         });
 
         if (!res.ok) {
+          Metrics.tickStargatePollsFailed()
           const text = await res.text().catch(() => "");
           throw new Error(
             `stargate returned HTTP ${res.status}: ${text.slice(0, 200)}`
           );
         }
-
+        Metrics.tickStargatePollsCompleted()
         const payload = (await res.json()) as StargateResponse;
         const tasks = Array.isArray(payload?.data) ? payload.data : [];
         if (tasks.length > 0) {
           logger.info("stargate_batch_received", { count: tasks.length });
+          Metrics.increaseTasksReceived(tasks.length)
           tasks.map((task) => processor.process(task));
         }
         failures = 0;
       } catch (err) {
         if (stopped || isAbortError(err)) break;
-
+        Metrics.tickStargatePollsFailed()
         const delayMs =
           BACKOFF_SCHEDULE_MS[Math.min(failures, BACKOFF_SCHEDULE_MS.length - 1)] ??
           BACKOFF_SCHEDULE_MS[BACKOFF_SCHEDULE_MS.length - 1]!;

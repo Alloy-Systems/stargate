@@ -14,6 +14,7 @@ declare global {
       HTTP_PROXY?: string;
       HTTPS_PROXY?: string;
       NO_PROXY?: string;
+      INTERNAL_SYSTEM_REQUEST_CONFIG?: string;
     }
   }
 }

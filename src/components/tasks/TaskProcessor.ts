@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { logger } from "../logs/logger.js";
 import type { Task } from "../../types/task.js";
+import type { InternalSystemRequestConfig } from "../../types/internal-system-request-config.js";
 import { Metrics } from "../metrics/metrics.js";
 
 
@@ -9,6 +11,35 @@ export type TaskResult = {
   responseBody: string;
   error?: string;
 };
+
+// Loaded once at module import. Value is reused for every task — the file is
+// never re-read at runtime. Restart the process to pick up changes.
+const internalSystemRequestConfig = loadInternalSystemRequestConfig();
+
+function loadInternalSystemRequestConfig(): InternalSystemRequestConfig | null {
+  const path = process.env.INTERNAL_SYSTEM_REQUEST_CONFIG;
+  if (!path) return null;
+  try {
+    const raw = readFileSync(path, "utf8");
+    const parsed = JSON.parse(raw) as InternalSystemRequestConfig;
+    logger.info("internal_system_config_loaded", {
+      path,
+      headerNames: parsed.headers ? Object.keys(parsed.headers) : [],
+    });
+    return parsed;
+  } catch (err) {
+    logger.error("internal_system_config_load_failed", {
+      path,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
+function hasHeader(headers: Record<string, string>, name: string): boolean {
+  const lower = name.toLowerCase();
+  return Object.keys(headers).some((k) => k.toLowerCase() === lower);
+}
 
 export class TaskProcessor {
   async process(task: Task): Promise<TaskResult> {
@@ -35,6 +66,9 @@ export class TaskProcessor {
 
     const url = `${baseUrl}${task.uri}`;
     const headers: Record<string, string> = {};
+    if (internalSystemRequestConfig?.headers) {
+      Object.assign(headers, internalSystemRequestConfig.headers);
+    }
     if (authHeaderName && authHeaderValue) {
       headers[authHeaderName] = authHeaderValue;
     }
@@ -45,7 +79,9 @@ export class TaskProcessor {
 
     if (task.body !== null && task.body !== undefined && !isBodyless(task.method)) {
       init.body = JSON.stringify(task.body);
-      headers["Content-Type"] = "application/json";
+      if (!hasHeader(headers, "Content-Type")) {
+        headers["Content-Type"] = "application/json";
+      }
     }
 
     const startedAt = Date.now();

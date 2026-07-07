@@ -104,8 +104,32 @@ The background daemon long-polls Alloy for tasks targeted at this system, runs t
 | `INTERNAL_SYSTEM_URL` | yes | Base URL of the internal service. Each task is executed as `${task.method} ${INTERNAL_SYSTEM_URL}${task.uri}` with `task.body` as JSON body. |
 | `INTERNAL_AUTHORIZATION_HEADER_NAME` | no | Header name to attach to internal-service requests. Defaults to `Authorization`. |
 | `INTERNAL_AUTHORIZATION_HEADER_VALUE` | no | Header value. If either name or value is empty, no auth header is added. Typical value: `Bearer <token>`. |
+| `INTERNAL_SYSTEM_REQUEST_CONFIG` | no | Path to a JSON file with extra headers to attach to every task request. Read once at startup and cached — restart to reload. |
 
 If any of the three required stargate vars are missing, the daemon logs `stargate_disabled` and stays idle (server still serves HTTP requests).
+
+#### Internal request config file
+
+When `INTERNAL_SYSTEM_REQUEST_CONFIG` is set, the file is read once at process startup and its `headers` are merged into every fetch to `INTERNAL_SYSTEM_URL`.
+
+```json
+{
+  "headers": {
+    "X-Client-Id": "gateway",
+    "Accept": "application/json"
+  }
+}
+```
+
+Header application order (later overrides earlier):
+
+1. Config file `headers` — applied first.
+2. Auth header from `INTERNAL_AUTHORIZATION_HEADER_NAME` / `_VALUE` — overrides config if the name matches.
+3. `Content-Type: application/json` — set only when the task has a body **and** neither config nor auth already provided a `Content-Type` (case-insensitive check).
+
+On startup the app logs `internal_system_config_loaded` (with the list of header names) or `internal_system_config_load_failed` (with the read/parse error). Load failures are non-fatal — the daemon runs as if no config were set.
+
+Type: [`InternalSystemRequestConfig`](src/types/internal-system-request-config.ts).
 
 ### HTTP proxy
 

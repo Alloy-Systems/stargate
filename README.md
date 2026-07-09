@@ -124,8 +124,9 @@ When `INTERNAL_SYSTEM_REQUEST_CONFIG` is set, the file is read once at process s
 Header application order (later overrides earlier):
 
 1. Config file `headers` — applied first.
-2. Auth header from `INTERNAL_AUTHORIZATION_HEADER_NAME` / `_VALUE` — overrides config if the name matches.
-3. `Content-Type: application/json` — set only when the task has a body **and** neither config nor auth already provided a `Content-Type` (case-insensitive check).
+2. `task.headers` from the stargate payload — per-task extras override the config-file defaults.
+3. Auth header from `INTERNAL_AUTHORIZATION_HEADER_NAME` / `_VALUE` — applied last so it stays authoritative and cannot be spoofed by a task.
+4. `Content-Type: application/json` — set only when the task has a body **and** no previous layer already provided a `Content-Type` (case-insensitive check).
 
 On startup the app logs `internal_system_config_loaded` (with the list of header names) or `internal_system_config_load_failed` (with the read/parse error). Load failures are non-fatal — the daemon runs as if no config were set.
 

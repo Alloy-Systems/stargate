@@ -69,6 +69,9 @@ export class TaskProcessor {
     if (internalSystemRequestConfig?.headers) {
       Object.assign(headers, internalSystemRequestConfig.headers);
     }
+    if (task.headers) {
+      Object.assign(headers, task.headers);
+    }
     if (authHeaderName && authHeaderValue) {
       headers[authHeaderName] = authHeaderValue;
     }
@@ -90,6 +93,7 @@ export class TaskProcessor {
       method: task.method,
       uri: task.uri,
       target: url,
+      headers: headers,
       hasBody: init.body !== undefined,
     });
 

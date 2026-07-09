@@ -5,6 +5,7 @@ export type Task = {
   method: string;
   uri: string;
   body: unknown | null;
+  headers: Record<string, string> | null;
   status: string;
   created_at: string;
   updated_at: string | null;
